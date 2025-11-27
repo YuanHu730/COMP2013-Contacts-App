@@ -2,8 +2,54 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import ContactsCardsContainer from "./ContactsCardsContainer";
 import ContactForm from "./ContactForm";
+import "../App.css";
+
+import { jwtDecode } from "jwt-decode";
+import Cookies from "js-cookie";
+import { useNavigate } from "react-router-dom";
+
 
 export default function ContactsApp() {
+  const [currentUser, setCurrentUser] = useState(() => {
+    const jwtToken = Cookies.get("jwt-authorization");
+    if (!jwtToken) return ""; // No token found
+    // Decode token to get username info
+    try {
+      const decodedToken = jwtDecode(jwtToken);
+      return decodedToken.username || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const navigate = useNavigate();
+
+  //Verify JWT on component mount and redirect if invalid
+  useEffect(() => {
+    const jwtToken = Cookies.get("jwt-authorization"); // Get JWT from cookies
+
+    if (!jwtToken) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      jwtDecode(jwtToken); // Try decoding the token
+      // If decoding is successful, token is valid
+    } catch (error) {
+      console.error("Invalid JWT", error); // Log error for debugging
+      // Redirect to login if token is invalid
+      navigate("/login");
+    }
+  }, [navigate]); // Empty dependency array ensures this runs only once on mount
+
+  const handleLogout = () => {
+    Cookies.remove("jwt-authorization");
+    setCurrentUser("");
+    navigate("/login");
+  };
+
+
   //States
   const [contactsData, setContactsData] = useState([]);
   const [formData, setFormData] = useState({
@@ -123,6 +169,10 @@ export default function ContactsApp() {
   //Render
   return (
     <div>
+      <div className="welcome">
+        <span>Welcome {currentUser}</span>
+        <button onClick={() => handleLogout()}>Logout</button>
+      </div>
       <ContactForm
         name={formData.name}
         email={formData.email}
